@@ -1,16 +1,21 @@
 package com.VitaliiChekalenko.telegrambotspring.service;
 
 import com.VitaliiChekalenko.telegrambotspring.config.BotConfig;
+import com.VitaliiChekalenko.telegrambotspring.model.User;
+import com.VitaliiChekalenko.telegrambotspring.model.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +24,9 @@ import static com.VitaliiChekalenko.telegrambotspring.constants.Constants.HELP_T
 @Slf4j
 @Component
 public class TelegramBot extends TelegramLongPollingBot {
+
+    @Autowired
+    private UserRepository userRepository;
 
     final BotConfig config;
 
@@ -57,6 +65,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             switch (messageText) {
                 case ("/start"):
+                    registerUser(update.getMessage());
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     break;
                 case ("/help"):
@@ -67,6 +76,25 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, "Sorry, command was not recognized!");
             }
 
+        }
+    }
+
+    private void registerUser(Message message) {
+
+        if (userRepository.findById(message.getChatId()).isEmpty()) {
+            var chatId = message.getChatId();
+            var chat = message.getChat();
+
+            User user = new User();
+
+            user.setChatId(chatId);
+            user.setFirstName(chat.getFirstName());
+            user.setLastName(chat.getLastName());
+            user.setUserName(chat.getUserName());
+            user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
+
+            userRepository.save(user);
+            log.info("user saved: " + user);
         }
     }
 
