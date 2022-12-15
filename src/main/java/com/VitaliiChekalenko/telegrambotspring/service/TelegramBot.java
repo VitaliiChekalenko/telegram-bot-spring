@@ -1,11 +1,14 @@
 package com.VitaliiChekalenko.telegrambotspring.service;
 
 import com.VitaliiChekalenko.telegrambotspring.config.BotConfig;
+import com.VitaliiChekalenko.telegrambotspring.model.Ads;
+import com.VitaliiChekalenko.telegrambotspring.model.AdsRepository;
 import com.VitaliiChekalenko.telegrambotspring.model.User;
 import com.VitaliiChekalenko.telegrambotspring.model.UserRepository;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -33,6 +36,9 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AdsRepository adsRepository;
 
     final BotConfig config;
 
@@ -218,5 +224,19 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(chatId);
         message.setText(textToSend);
         executeMessage(message);
+    }
+
+    @Scheduled(cron = "${cron.scheduler}")
+    private void sendAds() {
+        var ads = adsRepository.findAll();
+        var users = userRepository.findAll();
+
+        for (Ads ad : ads) {
+            for (User user : users) {
+                prepareAndSendMessage(user.getChatId(), ad.getAd());
+            }
+
+        }
+
     }
 }
